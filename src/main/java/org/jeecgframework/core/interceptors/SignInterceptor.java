@@ -9,6 +9,8 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,20 +26,31 @@ public class SignInterceptor implements HandlerInterceptor {
             JSONObject j=new JSONObject();
         try {
             String sign= request.getHeader("X-JEECG-SIGN");
-            String body=request.getParameter("body");
             if (StringUtil.isEmpty(sign)) {
                 throw new BusinessException("sign不能为空");
             }
-            if (StringUtil.isEmpty(body)){
-                throw new BusinessException("body不能为空");
+            Map param_map =new HashMap();
+            Map<String, String[]> paramMap = request.getParameterMap();
+            if(paramMap.size() > 0){
+            	for(Map.Entry<String, String[]> entry :paramMap.entrySet()){
+    	            String paramName = entry.getKey();
+    	            String paramValue = "";
+    	            String[] paramValueArr = entry.getValue();
+    	            for (int i = 0; paramValueArr!=null && i < paramValueArr.length; i++) {
+    	                if (i == paramValueArr.length-1) {
+    	                    paramValue+=paramValueArr[i];
+    	                }else {
+    	                    paramValue+=paramValueArr[i]+",";
+    	                }
+    	            }
+    	            param_map.put(paramName,paramValue);
+    	        }
             }
-            Map paramMap =new HashMap();
-            paramMap.put("body",body);
-            if(!SignatureUtil.checkSign(paramMap, SIGN_KEY, sign)){
+            if(!SignatureUtil.checkSign(param_map, SIGN_KEY, sign)){
                 throw new BusinessException("签名验证失败");
             }
         } catch (BusinessException e) {
-            j.put("success","false");
+            j.put("status","false");
             j.put("msg",e.getMessage());
             response.getWriter().print(j.toJSONString());
             return false;
